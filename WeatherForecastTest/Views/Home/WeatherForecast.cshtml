@@ -1,0 +1,237 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Weather Forecast</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-top: 20px;
+        }
+        .forecast-table {
+            margin: 20px auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            table-layout: fixed;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            word-wrap: break-word;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .alert {
+            padding: 15px;
+            background-color: #f44336;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .weather-icon {
+            width: 50px;
+            height: 50px;
+        }
+        keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        #refreshMessage {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: blue;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: none;
+            animation: blink 1s infinite;
+        }
+        .btn-custom {
+            margin: 10px;
+        }
+        media (max-width: 600px) {
+            th, td {
+                font-size: 12px;
+                padding: 4px;
+            }
+            .weather-icon {
+                width: 30px;
+                height: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Weather Forecast @Model.Name</h1>
+        <input type="text" id="cityName" name="cityName" value="@Model.Name" required readonly hidden>
+        <div class="center-align">
+            <button id="getForecastBtn" class="btn waves-effect waves-light blue btn-custom">Show 5-Day Forecast</button>
+        </div>
+        <div id="alertDiv" class="alert" style="display: none;"></div>
+        <table id="currentWeather" class="highlight centered responsive-table">
+            <thead>
+                <tr>
+                    <th>Information</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Temperature (Celsius)</td>
+                    <td id="tempC">@Model.Main.Temp °C</td>
+                </tr>
+                <tr>
+                    <td>Temperature (Fahrenheit)</td>
+                    <td id="tempF">
+                        @{
+                            var tempFahrenheit = (Model.Main.Temp * 9 / 5) + 32;
+                        }@tempFahrenheit °F
+                    </td>
+                </tr>
+                <tr>
+                    <td>Humidity</td>
+                    <td id="humidity">@Model.Main.Humidity %</td>
+                </tr>
+                <tr>
+                    <td>Wind Speed</td>
+                    <td id="windSpeed">@Model.Wind.Speed m/s</td>
+                </tr>
+                <tr>
+                    <td>Weather Condition</td>
+                    <td id="weatherCondition">@Model.Weather[0].Main - @Model.Weather[0].Description</td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="dateButtons" class="center-align"></div>
+        <div id="forecast" class="forecast-table"></div>
+    </div>
+    <div id="refreshMessage">Refreshing</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const city = document.getElementById("cityName").value;
+            const apiKey = "8d6d4d65768721012b19680c6e14b805";
+            const fetchInterval = 1 * 60 * 1000;
+            const refreshMessage = document.getElementById("refreshMessage");
+            const updateWeatherData = async () => {
+                refreshMessage.style.display = "block";
+                try {
+                    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    document.getElementById("tempC").textContent = `${data.main.temp} °C`;
+                    document.getElementById("tempF").textContent = `${((data.main.temp * 9 / 5) + 32).toFixed(2)} °F`;
+                    document.getElementById("humidity").textContent = `${data.main.humidity} %`;
+                    document.getElementById("windSpeed").textContent = `${data.wind.speed} m/s`;
+                    document.getElementById("weatherCondition").textContent = `${data.weather[0].main} - ${data.weather[0].description}`;
+                } catch (error) {
+                    console.error("Error fetching weather data:", error);
+                } finally {
+                    setTimeout(() => {
+                        refreshMessage.style.display = "none";
+                    }, 2000);
+                }
+            };
+            updateWeatherData();
+            setInterval(updateWeatherData, fetchInterval);
+        });
+
+        const getForecastBtn = document.getElementById("getForecastBtn");
+        getForecastBtn.addEventListener("click", async () => {
+            const city = document.getElementById("cityName").value;
+            const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=8d6d4d65768721012b19680c6e14b805&units=metric`;
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                console.log("data", data);
+                checkForAlerts(data);
+                displayDateButtons(data);
+            } catch (error) {
+                console.error(error);
+            }
+        });
+
+        const checkForAlerts = (data) => {
+            const alerts = data.list.some(entry => entry.weather[0].main === "Thunderstorm" || entry.weather[0].main === "Rain");
+            const alertDiv = document.getElementById("alertDiv");
+            if (alerts) {
+                alertDiv.textContent = "Severe weather alert: Thunderstorm or heavy rain expected.";
+                alertDiv.style.display = "block";
+            } else {
+                alertDiv.style.display = "none";
+            }
+        };
+
+        const displayDateButtons = (data) => {
+            const dateButtonsDiv = document.getElementById("dateButtons");
+            dateButtonsDiv.innerHTML = "";
+
+            const uniqueDates = [...new Set(data.list.map(entry => entry.dt_txt.split(' ')[0]))];
+
+            uniqueDates.forEach(date => {
+                const button = document.createElement("button");
+                button.textContent = date;
+                button.classList.add("btn", "waves-effect", "waves-light", "blue", "btn-custom");
+                button.addEventListener("click", () => {
+                    displayForecast(data, date);
+                });
+                dateButtonsDiv.appendChild(button);
+            });
+        };
+
+        const displayForecast = (data, selectedDate) => {
+            const forecastDiv = document.getElementById("forecast");
+            forecastDiv.innerHTML = "";
+            const filteredData = data.list.filter(entry => entry.dt_txt.split(' ')[0] === selectedDate);
+            const forecastTable = document.createElement("table");
+            forecastTable.classList.add("highlight", "centered", "responsive-table");
+            const headerRow = forecastTable.insertRow();
+            const headers = ["Time", "Temp (°C)", "Temp (°F)", "Humidity (%)", "Wind Speed (m/s)", "Weather", "Icon"];
+            headers.forEach(headerText => {
+                const header = document.createElement("th");
+                header.textContent = headerText;
+                headerRow.appendChild(header);
+            });
+
+            filteredData.forEach(entry => {
+                const row = forecastTable.insertRow();
+                row.insertCell().textContent = entry.dt_txt.split(' ')[1];
+                row.insertCell().textContent = `${entry.main.temp.toFixed(2)} °C`;
+                row.insertCell().textContent = `${((entry.main.temp * 9 / 5) + 32).toFixed(2)} °F`;
+                row.insertCell().textContent = `${entry.main.humidity}%`;
+                row.insertCell().textContent = `${entry.wind.speed} m/s`;
+                row.insertCell().textContent = `${entry.weather[0].main} - ${entry.weather[0].description}`;
+                const imgCell = row.insertCell();
+                const weatherIcon = document.createElement("img");
+                weatherIcon.src = `http://openweathermap.org/img/wn/${entry.weather[0].icon}.png`;
+                weatherIcon.classList.add("weather-icon");
+                imgCell.appendChild(weatherIcon);
+            });
+            forecastDiv.appendChild(forecastTable);
+        };
+    </script>
+</body>
+</html>
