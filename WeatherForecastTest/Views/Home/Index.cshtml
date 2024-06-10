@@ -108,7 +108,7 @@
                             lng: position.coords.longitude
                         };
                         map.setView(pos, 13);
-                        L.marker(pos).addTo(map).bindPopup("Your Location").openPopup();
+                        L.marker(pos).addTo(map).bindPopup("Current Location").openPopup();
                         fetchWeatherData(pos.lat, pos.lng);
                     },
                     () => {
