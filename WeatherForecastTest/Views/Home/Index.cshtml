@@ -4,82 +4,113 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather Forecast</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f5f5f5;
             margin: 0;
-            padding: 0;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+            box-sizing: border-box;
         }
+
         h1 {
             color: #17a2b8;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            font-size: 24px;
         }
+
         form {
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
         }
+
         label {
             color: #333;
             font-weight: bold;
             margin-right: 10px;
+            font-size: 14px;
         }
+
         input[type="text"] {
-            padding: 8px;
+            padding: 6px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            font-size: 16px;
+            font-size: 14px;
             transition: border-color 0.3s ease;
+            margin-bottom: 10px;
         }
+
             input[type="text"]:focus {
                 outline: none;
                 border-color: #17a2b8;
             }
+
         button {
-            padding: 8px 20px;
+            padding: 6px 15px;
             background-color: #17a2b8;
             color: #fff;
             border: none;
             border-radius: 4px;
-            font-size: 16px;
+            font-size: 14px;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            margin-bottom: 10px;
         }
+
             button:hover {
                 background-color: #138496;
             }
+
         #errorMessage {
             color: red;
             display: none;
             margin-top: 5px;
         }
+
         #weatherContainer {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
+            width: 100%;
         }
+
         #weatherInfo {
             text-align: center;
             color: #333;
+            font-size: 14px;
         }
+
         #map {
-            height: 200px;
-            width: 80%;
-            margin-bottom: 20px;
+            height: 150px;
+            width: 100%;
+            margin-bottom: 10px;
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
         }
+
+        #suggestions {
+            text-align: center;
+            color: #333;
+            margin-top: 10px;
+            font-size: 14px;
+        }
     </style>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 </head>
 <body>
     <h1>Weather Forecast</h1>
+    <div>
+        <strong>Today's Date:</strong> <span id="currentDate"></span>
+    </div>
     <form method="get" action="@Url.Action("GetWeatherForecast", "Home")">
         <div>
             <label for="cityName">Enter State name or zip code:</label>
@@ -91,15 +122,39 @@
     <div id="weatherContainer">
         <div id="map"></div>
         <div id="weatherInfo"></div>
+        <div id="suggestions"></div>
     </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
         const apiKey = "8d6d4d65768721012b19680c6e14b805";
-        document.addEventListener("DOMContentLoaded", () => {
+        $(document).ready(function () {
+            // Set current date
+            var today = new Date();
+            var formattedDate = today.toLocaleDateString('en-US', {
+                month: 'long',
+                day: '2-digit',
+                year: 'numeric'
+            });
+            $('#currentDate').text(formattedDate);
+
             const map = L.map('map').setView([51.505, -0.09], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
+
+            let currentMarker;
+
+            // Add event listener for map click to change location
+            map.on('click', function (e) {
+                const pos = e.latlng;
+                if (currentMarker) {
+                    map.removeLayer(currentMarker);
+                }
+                currentMarker = L.marker(pos).addTo(map).bindPopup("Selected Location").openPopup();
+                fetchWeatherData(pos.lat, pos.lng);
+            });
+
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
@@ -108,7 +163,7 @@
                             lng: position.coords.longitude
                         };
                         map.setView(pos, 13);
-                        L.marker(pos).addTo(map).bindPopup("Current Location").openPopup();
+                        currentMarker = L.marker(pos).addTo(map).bindPopup("Current Location").openPopup();
                         fetchWeatherData(pos.lat, pos.lng);
                     },
                     () => {
@@ -134,6 +189,7 @@
                 .then(response => response.json())
                 .then(data => {
                     displayWeatherData(data);
+                    generateSuggestions(data);
                 })
                 .catch(error => {
                     console.error("Error fetching weather data:", error);
@@ -149,12 +205,31 @@
             const weatherCondition = `${data.weather[0].main} - ${data.weather[0].description}`;
             const locationName = data.name;
             weatherInfo.innerHTML = `
-                                <h2>Current Weather in ${locationName}</h2>
-                                <p>Temperature: ${tempC} °C (${tempF} °F)</p>
-                                <p>Humidity: ${humidity} %</p>
-                                <p>Wind Speed: ${windSpeed} m/s</p>
-                                <p>Condition: ${weatherCondition}</p>
-                            `;
+                                        <h2>Current Weather in ${locationName}</h2>
+                                        <p>Temperature: ${tempC} °C (${tempF} °F)</p>
+                                        <p>Humidity: ${humidity} %</p>
+                                        <p>Wind Speed: ${windSpeed} m/s</p>
+                                        <p>Condition: ${weatherCondition}</p>
+                                    `;
+        }
+
+        function generateSuggestions(data) {
+            const suggestions = document.getElementById("suggestions");
+            const weatherCondition = data.weather[0].main.toLowerCase();
+            let suggestionText = '';
+            if (weatherCondition.includes('rain')) {
+                suggestionText = 'It\'s rainy today. Don\'t forget to carry an umbrella!';
+            } else if (weatherCondition.includes('clear')) {
+                suggestionText = 'The weather is clear today. A great day for outdoor activities!';
+            } else if (weatherCondition.includes('clouds')) {
+                suggestionText = 'It\'s cloudy today. You might want to take a light jacket.';
+            } else if (weatherCondition.includes('snow')) {
+                suggestionText = 'Snow is expected today. Stay warm and drive safely!';
+            } else {
+                suggestionText = 'Have a great day!';
+            }
+
+            suggestions.innerHTML = `<h3>Suggestions for Today</h3><p>${suggestionText}</p>`;
         }
     </script>
 </body>
