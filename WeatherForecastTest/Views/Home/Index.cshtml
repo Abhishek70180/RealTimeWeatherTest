@@ -116,7 +116,7 @@
             <label for="cityName">Enter State name or zip code:</label>
             <input type="text" id="cityName" name="cityName" required>
             <button type="submit">Search</button>
-            <p id="errorMessage">Please enter a maximum of 20 alphabetic characters.</p>
+            <p id="errorMessage" style="color: red; display: none;">Please enter a maximum of 20 alphabetic characters.</p>
         </div>
     </form>
     <div id="weatherContainer">
@@ -231,6 +231,15 @@
 
             suggestions.innerHTML = `<h3>Suggestions for Today</h3><p>${suggestionText}</p>`;
         }
+        document.getElementById("cityName").addEventListener("input", function () {
+            var cityName = this.value;
+            var errorMessage = document.getElementById("errorMessage");
+            if (cityName.length > 20) {
+                errorMessage.style.display = "block";
+            } else {
+                errorMessage.style.display = "none";
+            }
+        });
     </script>
 </body>
 </html>
