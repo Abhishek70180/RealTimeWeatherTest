@@ -89,6 +89,7 @@
         <input type="text" id="cityName" name="cityName" value="@Model.Name" required readonly hidden>
         <div class="center-align">
             <button id="getForecastBtn" class="btn waves-effect waves-light blue btn-custom">Show 5-Day Forecast</button>
+            <button id="backToHomeBtn" class="btn waves-effect waves-light grey btn-custom">Back to Home</button>
         </div>
         <div id="alertDiv" class="alert" style="display: none;"></div>
         <table id="currentWeather" class="highlight centered responsive-table">
@@ -157,6 +158,10 @@
             };
             updateWeatherData();
             setInterval(updateWeatherData, fetchInterval);
+
+            document.getElementById("backToHomeBtn").addEventListener("click", () => {
+                window.location.href = '/';
+            });
         });
 
         const getForecastBtn = document.getElementById("getForecastBtn");
