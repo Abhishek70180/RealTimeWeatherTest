@@ -216,11 +216,16 @@
         function generateSuggestions(data) {
             const suggestions = document.getElementById("suggestions");
             const weatherCondition = data.weather[0].main.toLowerCase();
+            const tempC = data.main.temp;
             let suggestionText = '';
             if (weatherCondition.includes('rain')) {
                 suggestionText = 'It\'s rainy today. Don\'t forget to carry an umbrella!';
             } else if (weatherCondition.includes('clear')) {
-                suggestionText = 'The weather is clear today. A great day for outdoor activities!';
+                if (tempC > 40) {
+                    suggestionText = 'Severe heat wave expected today. Stay hydrated and avoid direct sunlight!';
+                } else {
+                    suggestionText = 'The weather is clear today. A great day for outdoor activities!';
+                }
             } else if (weatherCondition.includes('clouds')) {
                 suggestionText = 'It\'s cloudy today. You might want to take a light jacket.';
             } else if (weatherCondition.includes('snow')) {
@@ -228,9 +233,9 @@
             } else {
                 suggestionText = 'Have a great day!';
             }
-
             suggestions.innerHTML = `<h3>Suggestions for Today</h3><p>${suggestionText}</p>`;
         }
+
         document.getElementById("cityName").addEventListener("input", function () {
             var cityName = this.value;
             var errorMessage = document.getElementById("errorMessage");
